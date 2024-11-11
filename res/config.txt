@@ -1,0 +1,6 @@
+[Server]
+hostname = 
+port = 
+username = 
+password = 
+remote_path = /main
