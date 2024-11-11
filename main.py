@@ -1,22 +1,38 @@
-import paramiko
-import tkinter as tk
 from tkinter import messagebox, filedialog, ttk, simpledialog
 import os
 import threading
 import stat
 import configparser
 import base64
+import paramiko
+import tkinter as tk
+from tkinter import messagebox
+import sys
+
+VERSION = "1.0"
+#Made By Fallax with the help of CHAT-GPT
+#####################
 
 
 # Debug mode flag
 debug_mode = False
 DECRYPT = True
 
+
+icon_path = 'res/favicon.ico'
+
 dhostname = ""
 dport = ""
 dusername = ""
 dpassword = ""
 
+def show_popup(title, message):
+    # Initialize Tkinter window
+    root = tk.Tk()
+    root.withdraw()  # Hide the main window
+    # Show a popup with the given title and message
+    messagebox.showerror(title, message)
+    root.quit()  # Close the Tkinter application
 
 # The fixed encryption key
 encryption_key = "zalsjo3fre5Zo2mNrG_ctiRwiQhGrOxIs_DnT8fUOkQ="
@@ -33,9 +49,21 @@ def base64_decode(data):
 # Decrypt the saved configuration from config.txt
 def decrypt():
     global dhostname, dport, dusername, dpassword  # Declare as global
+    config_path = "res/config.txt"
+
+    # Check if the 'res' folder or 'config.txt' file exists
+    if not os.path.exists(config_path):
+        show_popup("Error", "'res/config.txt' not found. Run config.exe")
+        sys.exit()
+
     # Read the encrypted values from the config file
-    with open("res/config.txt", "r") as config_file:
+    with open(config_path, "r") as config_file:
         lines = config_file.readlines()
+
+    # Ensure the config file has the expected number of lines
+    if len(lines) < 5:
+        show_popup("Error", "'missing required configuration lines. Run config.exe")
+        sys.exit()
 
     # Extract the encrypted values
     server_ip_encrypted = lines[1].split(" = ")[1].strip()
@@ -75,9 +103,9 @@ remote_path = config.get('Server', 'remote_path')
 # Create the main window for the GUI
 root = tk.Tk()
 root.title("Halo.Cloud")
+if os.path.exists(icon_path):
+    root.iconbitmap(icon_path)
 
-# Set the icon
-root.iconbitmap('res/favicon.ico')
 
 # Set the window size
 root.geometry("800x500")
@@ -96,6 +124,8 @@ scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
 # Configure the Listbox to work with the scrollbar
 listbox.config(yscrollcommand=scrollbar.set)
+
+
 
 # To keep track of the current path and history
 current_path = remote_path
@@ -121,17 +151,34 @@ def connect_to_server():
             client.connect(dhostname, dport, dusername, dpassword)
             sftp = client.open_sftp()
             debug_log("SFTP connection established.")
+        except paramiko.AuthenticationException:
+            debug_log("Authentication failed: Incorrect login details.")
+            messagebox.showerror("Connection Error", "Authentication failed: Incorrect login details. Please check your username and password.")
+            sys.exit()
+        except paramiko.SSHException as e:
+            debug_log(f"SSH error: {e}")
+            response = messagebox.askyesno("Connection Error", f"SSH error: {e}. The server might be unresponsive. Try again?")
+            if response:
+                # Code for 'Yes' response
+                connect_to_server()
+            else:
+                sys.exit()
         except Exception as e:
-            debug_log(f"Failed to connect to server: {e}")
-            messagebox.showerror("Connection Error", f"Could not connect to server: {e}")
+            # Check if the exception message contains errno 11001 (host not found)
+            if '11001' in str(e):
+                debug_log("DNS error: Hostname could not be resolved.")
+                messagebox.showerror("Connection Error", f"Could not establish connection with {dhostname}. Please check your network and server address.")
+            else:
+                debug_log(f"Failed to connect to server: {e}")
+                messagebox.showerror("Connection Error", f"Could not connect to server: {e}")
+            sys.exit()
+
 
 
 
 
 # Function to list files in the current directory
-import paramiko
-import tkinter as tk
-from tkinter import messagebox
+
 
 def list_files():
     global current_path
