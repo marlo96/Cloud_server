@@ -1,6 +1,9 @@
 import base64
 import tkinter as tk
 from tkinter import messagebox
+import os
+
+VERSION = "1.0"
 
 # The fixed encryption key
 encryption_key = "zalsjo3fre5Zo2mNrG_ctiRwiQhGrOxIs_DnT8fUOkQ="
@@ -31,14 +34,28 @@ def encrypt(server_ip, server_port, server_username, server_password):
     server_username_encrypted = base64_encode(server_username_encrypted)
     server_password_encrypted = base64_encode(server_password_encrypted)
 
-    # Write the encrypted values to config.txt
-    with open("res/config.txt", "w") as config_file:
-        config_file.write(f"[Server]\n")
-        config_file.write(f"hostname = {server_ip_encrypted}\n")
-        config_file.write(f"port = {server_port_encrypted}\n")
-        config_file.write(f"username = {server_username_encrypted}\n")
-        config_file.write(f"password = {server_password_encrypted}\n")
-        config_file.write(f"remote_path = /main\n")
+    # Check if the directory 'res' exists, create it if not
+    if not os.path.exists("res"):
+        os.makedirs("res")
+
+    # Check if the file exists, create it if not
+    if not os.path.exists("res/config.txt"):
+        with open("res/config.txt", "w") as config_file:
+            config_file.write(f"[Server]\n")
+            config_file.write(f"hostname = {server_ip_encrypted}\n")
+            config_file.write(f"port = {server_port_encrypted}\n")
+            config_file.write(f"username = {server_username_encrypted}\n")
+            config_file.write(f"password = {server_password_encrypted}\n")
+            config_file.write(f"remote_path = /main\n")
+    else:
+        # If the file exists, just append the encrypted configuration data
+        with open("res/config.txt", "w") as config_file:
+            config_file.write(f"[Server]\n")
+            config_file.write(f"hostname = {server_ip_encrypted}\n")
+            config_file.write(f"port = {server_port_encrypted}\n")
+            config_file.write(f"username = {server_username_encrypted}\n")
+            config_file.write(f"password = {server_password_encrypted}\n")
+            config_file.write(f"remote_path = /main\n")
 
     messagebox.showinfo("Success", "Configuration has been encrypted and saved to res/config.txt.")
 
@@ -66,12 +83,19 @@ def create_gui():
         entry_username.delete(0, tk.END)
         entry_password.delete(0, tk.END)
 
+    def validate_port_input(char):
+        return char.isdigit()
+
     # Create the main window
     window = tk.Tk()
     window.title("Halo.Cloud")
 
-    # Set the window icon
-    window.iconbitmap('res/favicon.ico')
+    # Set the window icon, check if it exists first
+    icon_path = 'res/favicon.ico'
+    if os.path.exists(icon_path):
+        window.iconbitmap(icon_path)
+    else:
+        print(f"Icon not found at {icon_path}, running without icon.")
 
     # Create labels and entries
     label_ip = tk.Label(window, text="Server IP:")
@@ -81,7 +105,10 @@ def create_gui():
 
     label_port = tk.Label(window, text="Server Port:")
     label_port.grid(row=1, column=0, padx=10, pady=5)
-    entry_port = tk.Entry(window, width=30)
+
+    # Validate port input to accept only numbers
+    validate_port_cmd = (window.register(validate_port_input), '%S')
+    entry_port = tk.Entry(window, width=30, validate="key", validatecommand=validate_port_cmd)
     entry_port.grid(row=1, column=1, padx=10, pady=5)
 
     label_username = tk.Label(window, text="Username:")
@@ -95,7 +122,7 @@ def create_gui():
     entry_password.grid(row=3, column=1, padx=10, pady=5)
 
     # Create submit button
-    submit_button = tk.Button(window, text="Encrypt and Save", command=on_submit)
+    submit_button = tk.Button(window, text="Save", command=on_submit)
     submit_button.grid(row=4, columnspan=2, pady=10)
 
     # Run the GUI
