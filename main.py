@@ -4,17 +4,74 @@ from tkinter import messagebox, filedialog, ttk, simpledialog
 import os
 import threading
 import stat
+import configparser
+import base64
+
 
 # Debug mode flag
-debug_mode = True
+debug_mode = False
+DECRYPT = True
 
-# Server details
-hostname = '0.0.0.1'
-port = 22
-username = "user"
-password = "password"
-remote_path = '/main'
+dhostname = ""
+dport = ""
+dusername = ""
+dpassword = ""
 
+
+# The fixed encryption key
+encryption_key = "zalsjo3fre5Zo2mNrG_ctiRwiQhGrOxIs_DnT8fUOkQ="
+
+# XOR decryption function (reverse of the encryption)
+def xor_decrypt(data, key):
+    decrypted = ''.join(chr(ord(c) ^ ord(key[i % len(key)])) for i, c in enumerate(data))
+    return decrypted
+
+# Function to Base64 decode
+def base64_decode(data):
+    return base64.urlsafe_b64decode(data).decode('utf-8')
+
+# Decrypt the saved configuration from config.txt
+def decrypt():
+    global dhostname, dport, dusername, dpassword  # Declare as global
+    # Read the encrypted values from the config file
+    with open("res/config.txt", "r") as config_file:
+        lines = config_file.readlines()
+
+    # Extract the encrypted values
+    server_ip_encrypted = lines[1].split(" = ")[1].strip()
+    server_port_encrypted = lines[2].split(" = ")[1].strip()
+    server_username_encrypted = lines[3].split(" = ")[1].strip()
+    server_password_encrypted = lines[4].split(" = ")[1].strip()
+
+    # Base64 decode the encrypted data
+    server_ip_encrypted = base64_decode(server_ip_encrypted)
+    server_port_encrypted = base64_decode(server_port_encrypted)
+    server_username_encrypted = base64_decode(server_username_encrypted)
+    server_password_encrypted = base64_decode(server_password_encrypted)
+
+    # XOR decrypt the data
+    dhostname = xor_decrypt(server_ip_encrypted, encryption_key)
+    dport = xor_decrypt(server_port_encrypted, encryption_key)
+    dport = int(dport)
+    dusername = xor_decrypt(server_username_encrypted, encryption_key)
+    dpassword = xor_decrypt(server_password_encrypted, encryption_key)
+
+
+
+if DECRYPT is not False and debug_mode is not False:
+    print("Called decrypt function")
+    DECRYPT = False
+    decrypt()
+if DECRYPT is not False:
+    DECRYPT = False
+    decrypt()
+
+
+
+
+config = configparser.ConfigParser()
+config.read('res/config.txt')  # Update the path if necessary
+remote_path = config.get('Server', 'remote_path')
 # Create the main window for the GUI
 root = tk.Tk()
 root.title("Halo.Cloud")
@@ -61,12 +118,14 @@ def connect_to_server():
     if not sftp:
         try:
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(hostname, port=port, username=username, password=password)
+            client.connect(dhostname, dport, dusername, dpassword)
             sftp = client.open_sftp()
             debug_log("SFTP connection established.")
         except Exception as e:
             debug_log(f"Failed to connect to server: {e}")
             messagebox.showerror("Connection Error", f"Could not connect to server: {e}")
+
+
 
 
 # Function to list files in the current directory
