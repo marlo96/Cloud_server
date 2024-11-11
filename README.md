@@ -38,7 +38,7 @@ sudo systemctl restart ssh
 sudo reboot
 
 Now the server is setup properly and secure.
-We can modify the script now with our details (server ip, port, username, password, home folder location i.e /home/customhomedir/main)
+We can modify the script now with our details (server ip, port, username, password) by using config.py
 and is ready to go 
 Have fun
 
